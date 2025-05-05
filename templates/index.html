@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Personal Portfolio Tracker</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+</head>
+
+<body>
+    <header>
+        <div class="container">
+            <h1>Personal Portfolio Tracker</h1>
+            <p>Upload screenshots, track investments, analyze performance</p>
+        </div>
+    </header>
+
+    <main class="container">
+        <div class="grid">
+            <!-- Upload Section -->
+            <div class="card">
+                <h2 class="section-title">Upload Position Screenshot</h2>
+                <form id="uploadForm" enctype="multipart/form-data">
+                    <div class="form-group">
+                        <label for="tag">Tag (Broker, Account, etc.)</label>
+                        <input type="text" id="tag" name="tag" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="image">Screenshot Image</label>
+                        <input type="file" id="image" name="image" accept="image/*" required>
+                    </div>
+                    <button type="submit" id="uploadBtn">Upload & Process</button>
+                </form>
+                <div id="uploadResult" class="alert hide"></div>
+                <div id="uploadLoading" class="loading hide">
+                    <div class="spinner"></div>
+                    <p>Analyzing screenshot...</p>
+                </div>
+            </div>
+
+            <!-- Manual Edit Section -->
+            <div class="card">
+                <h2 class="section-title">Manually Edit Position</h2>
+                <form id="editForm">
+                    <div class="form-group">
+                        <label for="editSymbol">Symbol</label>
+                        <input type="text" id="editSymbol" name="symbol" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="editTag">Tag</label>
+                        <input type="text" id="editTag" name="tag" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="editShares">Shares</label>
+                        <input type="number" id="editShares" name="shares" step="0.01" required>
+                    </div>
+                    <button type="submit" id="editBtn">Save Changes</button>
+                </form>
+                <div id="editResult" class="alert hide"></div>
+            </div>
+        </div>
+
+        <!-- Portfolio View Section -->
+        <div class="card">
+            <h2 class="section-title">Portfolio Positions</h2>
+
+            <div class="filters">
+                <h3>Filters</h3>
+                <div class="flex">
+                    <div id="tagFilters" class="flex">
+                        <!-- Tag filters will be populated here -->
+                    </div>
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="groupBySymbol">
+                        <label for="groupBySymbol">Group by Symbol</label>
+                    </div>
+                    <button id="refreshBtn" class="btn-secondary">Refresh Prices</button>
+                </div>
+            </div>
+
+            <div id="portfolioLoading" class="loading hide">
+                <div class="spinner"></div>
+                <p>Loading portfolio data...</p>
+            </div>
+
+            <div id="portfolioContent">
+                <table id="positionsTable">
+                    <thead>
+                        <tr>
+                            <th>Symbol</th>
+                            <th>Tag</th>
+                            <th>Shares</th>
+                            <th>Price</th>
+                            <th>Value</th>
+                            <th>Last Updated</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <!-- Position data will be populated here -->
+                    </tbody>
+                </table>
+
+                <div class="total-value">
+                    Total Portfolio Value: <span id="totalValue">$0.00</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Chat Section -->
+        <div class="card chat-container">
+            <h2 class="section-title">Chat with Your Portfolio</h2>
+            <form id="chatForm">
+                <div class="form-group">
+                    <label for="chatQuery">Ask a question about your portfolio</label>
+                    <input type="text" id="chatQuery" name="query"
+                        placeholder="Example: What are my top 3 holdings by value?" required>
+                </div>
+                <button type="submit" id="chatBtn">Ask</button>
+            </form>
+
+            <div id="chatLoading" class="loading hide">
+                <div class="spinner"></div>
+                <p>Analyzing portfolio...</p>
+            </div>
+
+            <div id="chatResponse" class="card hide">
+                <!-- Chat response will go here -->
+            </div>
+        </div>
+    </main>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            // Initial portfolio load
+            loadPortfolio();
+
+            // Upload form submission
+            document.getElementById('uploadForm').addEventListener('submit', function (e) {
+                e.preventDefault();
+                uploadScreenshot();
+            });
+
+            // Edit form submission
+            document.getElementById('editForm').addEventListener('submit', function (e) {
+                e.preventDefault();
+                editPosition();
+            });
+
+            // Chat form submission
+            document.getElementById('chatForm').addEventListener('submit', function (e) {
+                e.preventDefault();
+                sendChatQuery();
+            });
+
+            // Refresh button click
+            document.getElementById('refreshBtn').addEventListener('click', function () {
+                loadPortfolio();
+            });
+
+            // Group by checkbox change
+            document.getElementById('groupBySymbol').addEventListener('change', function () {
+                loadPortfolio();
+            });
+        });
+
+        // Function to upload screenshot
+        async function uploadScreenshot() {
+            const form = document.getElementById('uploadForm');
+            const formData = new FormData(form);
+            const resultDiv = document.getElementById('uploadResult');
+            const loadingDiv = document.getElementById('uploadLoading');
+
+            // Show loading state
+            resultDiv.classList.add('hide');
+            loadingDiv.classList.remove('hide');
+
+            try {
+                const response = await fetch('/upload', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    resultDiv.innerHTML = `<div class="alert alert-success">${data.message}</div>`;
+                    form.reset();
+                    loadPortfolio(); // Reload portfolio data
+                } else {
+                    resultDiv.innerHTML = `<div class="alert alert-error">Error: ${data.detail}</div>`;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="alert alert-error">Error: ${error.message}</div>`;
+            } finally {
+                loadingDiv.classList.add('hide');
+                resultDiv.classList.remove('hide');
+            }
+        }
+
+        // Function to edit position
+        async function editPosition() {
+            const form = document.getElementById('editForm');
+            const resultDiv = document.getElementById('editResult');
+
+            // Get form data
+            const data = {
+                symbol: document.getElementById('editSymbol').value,
+                tag: document.getElementById('editTag').value,
+                shares: parseFloat(document.getElementById('editShares').value)
+            };
+
+            resultDiv.classList.add('hide');
+
+            try {
+                const response = await fetch('/edit', {
+                    method: 'PATCH',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(data)
+                });
+
+                const responseData = await response.json();
+
+                if (response.ok) {
+                    resultDiv.innerHTML = `<div class="alert alert-success">${responseData.message}</div>`;
+                    form.reset();
+                    loadPortfolio(); // Reload portfolio data
+                } else {
+                    resultDiv.innerHTML = `<div class="alert alert-error">Error: ${responseData.detail}</div>`;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="alert alert-error">Error: ${error.message}</div>`;
+            } finally {
+                resultDiv.classList.remove('hide');
+            }
+        }
+
+        // Function to load portfolio
+        async function loadPortfolio() {
+            const tableBody = document.querySelector('#positionsTable tbody');
+            const loadingDiv = document.getElementById('portfolioLoading');
+            const contentDiv = document.getElementById('portfolioContent');
+            const totalValueSpan = document.getElementById('totalValue');
+            const tagFiltersDiv = document.getElementById('tagFilters');
+
+            // Get filters
+            const groupBySymbol = document.getElementById('groupBySymbol').checked;
+            const excludeTags = Array.from(document.querySelectorAll('.tag-filter:checked')).map(el => el.value);
+
+            // Show loading state
+            contentDiv.classList.add('hide');
+            loadingDiv.classList.remove('hide');
+
+            try {
+                // Build query parameters
+                let queryParams = new URLSearchParams();
+                if (groupBySymbol) {
+                    queryParams.append('group_by', 'true');
+                }
+                excludeTags.forEach(tag => queryParams.append('exclude', tag));
+
+                const response = await fetch(`/positions?${queryParams.toString()}`);
+                const data = await response.json();
+
+                if (response.ok) {
+                    // Clear table
+                    tableBody.innerHTML = '';
+
+                    // Populate table with positions
+                    if (data.positions.length === 0) {
+                        tableBody.innerHTML = `<tr><td colspan="6" style="text-align: center;">No positions found</td></tr>`;
+                    } else {
+                        // Track unique tags for filters
+                        const uniqueTags = new Set();
+
+                        data.positions.forEach(position => {
+                            const row = document.createElement('tr');
+
+                            // Add position data to row
+                            row.innerHTML = `
+                                <td class="symbol">${position.symbol}</td>
+                                <td>${position.tag || (position.tags ? position.tags.join(', ') : 'N/A')}</td>
+                                <td>${position.shares.toFixed(2)}</td>
+                                <td>$${position.price.toFixed(2)}</td>
+                                <td>$${position.value.toFixed(2)}</td>
+                                <td>${new Date(position.last_updated).toLocaleString()}</td>
+                            `;
+
+                            tableBody.appendChild(row);
+
+                            // Add to unique tags
+                            if (position.tag) {
+                                uniqueTags.add(position.tag);
+                            }
+                        });
+
+                        // Update total value
+                        totalValueSpan.textContent = `$${data.total_value.toFixed(2)}`;
+
+                        // Update tag filters
+                        updateTagFilters(Array.from(uniqueTags), excludeTags);
+                    }
+                } else {
+                    alert(`Error loading portfolio: ${data.detail}`);
+                }
+            } catch (error) {
+                alert(`Error loading portfolio: ${error.message}`);
+            } finally {
+                loadingDiv.classList.add('hide');
+                contentDiv.classList.remove('hide');
+            }
+        }
+
+        // Function to update tag filters
+        function updateTagFilters(tags, excludedTags) {
+            const tagFiltersDiv = document.getElementById('tagFilters');
+
+            // Only rebuild if we have new tags
+            if (tagFiltersDiv.children.length === 0 || tagFiltersDiv.children.length !== tags.length) {
+                tagFiltersDiv.innerHTML = '';
+
+                tags.forEach(tag => {
+                    const filterGroup = document.createElement('div');
+                    filterGroup.className = 'checkbox-group';
+
+                    const checkbox = document.createElement('input');
+                    checkbox.type = 'checkbox';
+                    checkbox.className = 'tag-filter';
+                    checkbox.id = `filter-${tag}`;
+                    checkbox.value = tag;
+                    checkbox.checked = excludedTags.includes(tag);
+                    checkbox.addEventListener('change', loadPortfolio);
+
+                    const label = document.createElement('label');
+                    label.htmlFor = `filter-${tag}`;
+                    label.textContent = `Hide ${tag}`;
+
+                    filterGroup.appendChild(checkbox);
+                    filterGroup.appendChild(label);
+                    tagFiltersDiv.appendChild(filterGroup);
+                });
+            }
+        }
+
+        // Function to send chat query
+        async function sendChatQuery() {
+            const form = document.getElementById('chatForm');
+            const query = document.getElementById('chatQuery').value;
+            const responseDiv = document.getElementById('chatResponse');
+            const loadingDiv = document.getElementById('chatLoading');
+
+            // Show loading state
+            responseDiv.classList.add('hide');
+            loadingDiv.classList.remove('hide');
+
+            try {
+                const response = await fetch('/chat', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ query })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    responseDiv.innerHTML = `<h3>Response:</h3><p>${data.response.replace(/\n/g, '<br>')}</p>`;
+                } else {
+                    responseDiv.innerHTML = `<h3>Error:</h3><p>${data.detail}</p>`;
+                }
+            } catch (error) {
+                responseDiv.innerHTML = `<h3>Error:</h3><p>${error.message}</p>`;
+            } finally {
+                loadingDiv.classList.add('hide');
+                responseDiv.classList.remove('hide');
+            }
+        }
+    </script>
+</body>
+
+</html>
