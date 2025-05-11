@@ -29,10 +29,17 @@
                         <input type="text" id="tag" name="tag" required>
                     </div>
                     <div class="form-group">
-                        <label for="image">Screenshot Image</label>
-                        <input type="file" id="image" name="image" accept="image/*" required>
+                        <div id="uploadArea" class="upload-area">
+                            <input type="file" id="image" name="image" accept="image/*" class="file-input">
+                            <div class="upload-content">
+                                <i class="fas fa-cloud-upload-alt"></i>
+                                <p>Drag & drop your screenshot here, or click to browse</p>
+                                <p class="upload-hint">You can also paste directly (Ctrl+V)</p>
+                            </div>
+                            <div id="pastePreview" class="paste-preview hide"></div>
+                        </div>
                     </div>
-                    <button type="submit" id="uploadBtn">Upload & Process</button>
+                    <button type="submit" id="uploadBtn">Process Screenshot</button>
                 </form>
                 <div id="uploadResult" class="alert hide"></div>
                 <div id="uploadLoading" class="loading hide">
@@ -76,6 +83,10 @@
                     <div class="checkbox-group">
                         <input type="checkbox" id="groupBySymbol">
                         <label for="groupBySymbol">Group by Symbol</label>
+                    </div>
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="hideOptions">
+                        <label for="hideOptions">Hide Options</label>
                     </div>
                     <button id="refreshBtn" class="btn-secondary">Refresh Prices</button>
                 </div>
@@ -132,6 +143,65 @@
         </div>
     </main>
 
+    <style>
+        .upload-area {
+            border: 2px dashed #ccc;
+            border-radius: 4px;
+            padding: 20px;
+            text-align: center;
+            margin: 10px 0;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        .upload-area:hover {
+            border-color: #666;
+            background-color: #f9f9f9;
+        }
+
+        .upload-area.dragover {
+            border-color: #4CAF50;
+            background-color: #e8f5e9;
+        }
+
+        .file-input {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            top: 0;
+            left: 0;
+            opacity: 0;
+            cursor: pointer;
+        }
+
+        .upload-content {
+            pointer-events: none;
+        }
+
+        .upload-content i {
+            font-size: 48px;
+            color: #666;
+            margin-bottom: 10px;
+        }
+
+        .upload-hint {
+            font-size: 0.9em;
+            color: #666;
+            margin-top: 5px;
+        }
+
+        .paste-preview {
+            margin-top: 10px;
+        }
+
+        .paste-preview img {
+            max-width: 100%;
+            max-height: 200px;
+            border-radius: 4px;
+        }
+    </style>
+
     <script>
         document.addEventListener('DOMContentLoaded', function () {
             // Initial portfolio load
@@ -163,6 +233,57 @@
             // Group by checkbox change
             document.getElementById('groupBySymbol').addEventListener('change', function () {
                 loadPortfolio();
+            });
+
+            // Hide options checkbox change
+            document.getElementById('hideOptions').addEventListener('change', function () {
+                loadPortfolio();
+            });
+
+            // Update paste event listeners
+            const uploadArea = document.getElementById('uploadArea');
+            const pastePreview = document.getElementById('pastePreview');
+            const tagInput = document.getElementById('tag');
+
+            // Handle paste events
+            document.addEventListener('paste', function(e) {
+                const items = (e.clipboardData || e.originalEvent.clipboardData).items;
+                
+                for (let i = 0; i < items.length; i++) {
+                    if (items[i].type.indexOf('image') !== -1) {
+                        e.preventDefault();
+                        const file = items[i].getAsFile();
+                        handlePastedImage(file);
+                        break;
+                    }
+                }
+            });
+
+            // Handle file input change
+            document.getElementById('image').addEventListener('change', function(e) {
+                if (e.target.files.length > 0) {
+                    handlePastedImage(e.target.files[0]);
+                }
+            });
+
+            // Handle drag and drop
+            uploadArea.addEventListener('dragover', function(e) {
+                e.preventDefault();
+                uploadArea.classList.add('dragover');
+            });
+
+            uploadArea.addEventListener('dragleave', function() {
+                uploadArea.classList.remove('dragover');
+            });
+
+            uploadArea.addEventListener('drop', function(e) {
+                e.preventDefault();
+                uploadArea.classList.remove('dragover');
+                
+                const file = e.dataTransfer.files[0];
+                if (file && file.type.startsWith('image/')) {
+                    handlePastedImage(file);
+                }
             });
         });
 
@@ -249,6 +370,7 @@
 
             // Get filters
             const groupBySymbol = document.getElementById('groupBySymbol').checked;
+            const hideOptions = document.getElementById('hideOptions').checked;
             const excludeTags = Array.from(document.querySelectorAll('.tag-filter:checked')).map(el => el.value);
 
             // Show loading state
@@ -260,6 +382,9 @@
                 let queryParams = new URLSearchParams();
                 if (groupBySymbol) {
                     queryParams.append('group_by', 'true');
+                }
+                if (hideOptions) {
+                    queryParams.append('hide_options', 'true');
                 }
                 excludeTags.forEach(tag => queryParams.append('exclude', tag));
 
@@ -285,8 +410,8 @@
                                 <td class="symbol">${position.symbol}</td>
                                 <td>${position.tag || (position.tags ? position.tags.join(', ') : 'N/A')}</td>
                                 <td>${position.shares.toFixed(2)}</td>
-                                <td>$${position.price.toFixed(2)}</td>
-                                <td>$${position.value.toFixed(2)}</td>
+                                <td>$${Number(position.price).toFixed(2)}</td>
+                                <td>$${Number(position.value).toFixed(2)}</td>
                                 <td>${new Date(position.last_updated).toLocaleString()}</td>
                             `;
 
@@ -379,6 +504,75 @@
                 loadingDiv.classList.add('hide');
                 responseDiv.classList.remove('hide');
             }
+        }
+
+        // Function to handle pasted image
+        async function handlePastedImage(file) {
+            const resultDiv = document.getElementById('uploadResult');
+            const loadingDiv = document.getElementById('uploadLoading');
+            const pastePreview = document.getElementById('pastePreview');
+            const tag = document.getElementById('tag').value;
+
+            if (!tag) {
+                resultDiv.innerHTML = '<div class="alert alert-error">Please enter a tag first</div>';
+                resultDiv.classList.remove('hide');
+                return;
+            }
+
+            // Show preview
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                pastePreview.innerHTML = `<img src="${e.target.result}" alt="Pasted image preview">`;
+                pastePreview.classList.remove('hide');
+            };
+            reader.readAsDataURL(file);
+
+            // Show loading state
+            resultDiv.classList.add('hide');
+            loadingDiv.classList.remove('hide');
+
+            try {
+                // Convert file to base64
+                const base64Data = await fileToBase64(file);
+                
+                // Send to server
+                const response = await fetch('/paste', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        image_data: base64Data,
+                        tag: tag
+                    })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    resultDiv.innerHTML = `<div class="alert alert-success">${data.message}</div>`;
+                    document.getElementById('uploadForm').reset();
+                    pastePreview.classList.add('hide');
+                    loadPortfolio(); // Reload portfolio data
+                } else {
+                    resultDiv.innerHTML = `<div class="alert alert-error">Error: ${data.detail}</div>`;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="alert alert-error">Error: ${error.message}</div>`;
+            } finally {
+                loadingDiv.classList.add('hide');
+                resultDiv.classList.remove('hide');
+            }
+        }
+
+        // Helper function to convert file to base64
+        function fileToBase64(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.readAsDataURL(file);
+                reader.onload = () => resolve(reader.result);
+                reader.onerror = error => reject(error);
+            });
         }
     </script>
 </body>

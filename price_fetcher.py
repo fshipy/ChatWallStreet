@@ -45,22 +45,38 @@ def fetch_prices_yfinance(symbols: List[str]) -> Dict[str, float]:
     prices = {}
     
     # Batch fetch data for all symbols
-    data = yf.download(symbols, period="1d", progress=False)
-    
-    # If only one symbol is requested, the structure is different
-    if len(symbols) == 1:
-        prices[symbols[0]] = data["Close"].iloc[-1]
-    else:
-        # Extract the latest closing price for each symbol
-        for symbol in symbols:
+    try:
+        data = yf.download(symbols, period="1d", progress=False)
+        
+        # If only one symbol is requested, the structure is different
+        if len(symbols) == 1:
             try:
-                # Handle if the symbol wasn't found
-                if symbol in data["Close"]:
-                    prices[symbol] = data["Close"][symbol].iloc[-1]
-                else:
-                    prices[symbol] = 0.0
+                price = float(data["Close"].iloc[-1].iloc[0])
+                # Ensure the price is a valid number
+                if not (price > 0 and price < float('inf')):
+                    price = 0.0
+                prices[symbols[0]] = price
             except Exception:
-                prices[symbol] = 0.0
+                prices[symbols[0]] = 0.0
+        else:
+            # Extract the latest closing price for each symbol
+            for symbol in symbols:
+                try:
+                    # Handle if the symbol wasn't found
+                    if symbol in data["Close"]:
+                        price = float(data["Close"][symbol].iloc[-1])
+                        # Ensure the price is a valid number
+                        if not (price > 0 and price < float('inf')):
+                            price = 0.0
+                        prices[symbol] = price
+                    else:
+                        prices[symbol] = 0.0
+                except Exception:
+                    prices[symbol] = 0.0
+    except Exception:
+        # If the entire download fails, set all prices to 0
+        for symbol in symbols:
+            prices[symbol] = 0.0
     
     return prices
 

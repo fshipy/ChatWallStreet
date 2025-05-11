@@ -2,6 +2,7 @@ import csv
 import os
 import datetime
 from typing import List, Dict, Any, Optional
+import re
 
 # Define the structure of our holdings CSV
 HOLDINGS_CSV_PATH = "data/holdings.csv"
@@ -110,15 +111,17 @@ def edit_holding(symbol: str, tag: str, shares: float):
 def filter_holdings(
     holdings: List[Dict[str, Any]], 
     include_tags: Optional[List[str]] = None, 
-    exclude_tags: Optional[List[str]] = None
+    exclude_tags: Optional[List[str]] = None,
+    hide_options: bool = False
 ) -> List[Dict[str, Any]]:
     """
-    Filter holdings by tags to include or exclude.
+    Filter holdings by tags to include or exclude, and optionally hide options (symbols ending with numbers).
     
     Args:
         holdings: List of holdings
         include_tags: List of tags to include (if None, include all)
         exclude_tags: List of tags to exclude
+        hide_options: Whether to hide options (symbols ending with numbers)
         
     Returns:
         Filtered list of holdings
@@ -130,6 +133,9 @@ def filter_holdings(
     
     if exclude_tags:
         filtered = [h for h in filtered if h.get('tag') not in exclude_tags]
+    
+    if hide_options:
+        filtered = [h for h in filtered if not re.search(r'\d+$', str(h.get('symbol', '')))]
     
     return filtered
 

@@ -6,3 +6,5 @@ httpx
 python-dotenv
 yfinance
 pillow
+jinja2
+openai

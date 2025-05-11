@@ -1,43 +1,67 @@
 #!/bin/bash
 
-# Exit on error
-set -e
+# Colors for output
+GREEN='\033[0;32m'
+BLUE='\033[0;34m'
+YELLOW='\033[1;33m'
+NC='\033[0m' # No Color
 
-echo "Setting up Personal Portfolio Tracker..."
-
-# Create virtual environment
-echo "Creating virtual environment..."
-python3 -m venv .portfolio-tracker
-
-# Activate virtual environment
-echo "Activating virtual environment..."
-source .portfolio-tracker/bin/activate
-
-# Install dependencies
-echo "Installing dependencies..."
-pip3 install -r requirements.txt
-
-# Check if .env file exists, if not create from example
-if [ ! -f .env ]; then
-    echo "Creating .env file from .env.example..."
-    cp .env.example .env
-    echo "Please edit the .env file to add your API keys before starting the app."
-    echo "At minimum, you'll need to add your GEMINI_API_KEY."
+# Default to venv if no argument provided
+USE_CONDA=false
+if [ "$1" == "--conda" ]; then
+    USE_CONDA=true
 fi
 
-# Create necessary directories
-echo "Creating necessary directories..."
-mkdir -p data images static templates
+echo -e "${BLUE}Setting up ChatWallStreet environment...${NC}"
 
-echo "Setup complete!"
-echo "To start the app, run: source .portfolio-tracker/bin/activate && python app.py"
-echo "Then open your browser to: http://localhost:8000"
+if [ "$USE_CONDA" = true ]; then
+    # Check if conda is installed
+    if ! command -v conda &> /dev/null; then
+        echo -e "${YELLOW}Conda is not installed. Please install conda first.${NC}"
+        exit 1
+    fi
 
-# Ask if user wants to start the app now
-read -p "Do you want to start the app now? (y/n): " answer
-if [[ $answer == "y" || $answer == "Y" ]]; then
-    echo "Starting app..."
-    python app.py
+    # Create or activate conda environment
+    if ! conda env list | grep -q "chatwallstreet"; then
+        echo -e "${GREEN}Creating conda environment...${NC}"
+        conda create -n chatwallstreet python=3.10 -y
+    else
+        echo -e "${GREEN}Conda environment already exists.${NC}"
+    fi
+
+    # Activate conda environment
+    echo -e "${GREEN}Activating conda environment...${NC}"
+    eval "$(conda shell.bash hook)"
+    conda activate chatwallstreet
+
 else
-    echo "You can start the app later with: source .portfolio-tracker/bin/activate && python app.py"
-fi 
+    # Check if Python 3 is installed
+    if ! command -v python3 &> /dev/null; then
+        echo -e "${YELLOW}Python 3 is not installed. Please install Python 3 first.${NC}"
+        exit 1
+    fi
+
+    # Create virtual environment if it doesn't exist
+    if [ ! -d ".venv" ]; then
+        echo -e "${GREEN}Creating virtual environment...${NC}"
+        python3 -m venv .venv
+    else
+        echo -e "${GREEN}Virtual environment already exists.${NC}"
+    fi
+
+    # Activate virtual environment
+    echo -e "${GREEN}Activating virtual environment...${NC}"
+    source .venv/bin/activate
+fi
+
+# Upgrade pip
+echo -e "${GREEN}Upgrading pip...${NC}"
+python -m pip install --upgrade pip
+
+# Install requirements
+echo -e "${GREEN}Installing required packages...${NC}"
+pip install -r requirements.txt
+
+# # Start the application
+echo -e "${GREEN}Starting the application...${NC}"
+python -m uvicorn app:app --reload --host 0.0.0.0 --port 8000 

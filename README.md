@@ -1,83 +1,97 @@
-# Personal Portfolio Tracker
+# ChatWallStreet - AI-Powered Portfolio Tracker
 
-A zero-setup Python/CSV web app to track your stock positions from screenshots. Upload images, let your chosen LLM extract stock positions, and view/update your holdings—all without OCR services, databases, or logins.
+A modern web application that uses AI to help you track and analyze your stock portfolio from screenshots. Upload images of your positions, let AI extract the data, and get insights about your investments—all without complex setup or databases.
 
 ## Features
 
-- **Upload Screenshots**: Extract stock positions directly from screenshots using AI
-- **Multiple Portfolios**: Tag positions by broker, account type, or any custom label
-- **Live Price Data**: View current values using free stock price APIs
-- **Filtering & Aggregation**: Group by symbol or filter by tag
-- **AI Chat**: Ask questions about your portfolio and get AI-powered insights
-- **No Database Setup**: All data stored in simple CSV files
+- **AI-Powered Position Extraction**: Upload screenshots of your portfolio and let AI extract stock positions automatically
+- **Multiple Portfolio Support**: Organize positions by broker, account type, or custom tags
+- **Real-Time Price Updates**: Get current market values using free stock price APIs
+- **Smart Filtering**: Group positions by symbol or filter by tags
+- **AI Chat Interface**: Ask questions about your portfolio and get intelligent insights
+- **Simple Data Storage**: All data stored in CSV format - no database setup required
+- **Paste Support**: Directly paste screenshots from your clipboard
+- **Manual Editing**: Edit positions manually when needed
+- **Modern Web Interface**: Clean, responsive UI for easy portfolio management
 
-## Installation
+## Quick Start
 
 1. Clone the repository:
-   ```
-   git clone https://github.com/yourusername/portfolio-tracker.git
-   cd portfolio-tracker
+   ```bash
+   git clone https://github.com/yourusername/ChatWallStreet.git
+   cd ChatWallStreet
    ```
 
-2. Install the requirements:
-   ```
+2. Install dependencies:
+   ```bash
    pip install -r requirements.txt
    ```
 
-3. Set up API keys (create a `.env` file in the root directory):
+3. Configure your environment (create a `.env` file):
    ```
-   # Choose one of these LLM providers (Gemini is the default)
+   # Choose your LLM provider (Gemini is default)
    LLM_BACKEND=gemini  # or "openai" or "anthropic"
    
-   # API keys based on your chosen provider
+   # Add your API key for the chosen provider
    GEMINI_API_KEY=your_gemini_api_key
-   OPENAI_API_KEY=your_openai_api_key
-   ANTHROPIC_API_KEY=your_anthropic_api_key
+   # OPENAI_API_KEY=your_openai_api_key
+   # ANTHROPIC_API_KEY=your_anthropic_api_key
    
-   # Optional: Choose price data provider (defaults to yfinance)
+   # Optional: Configure price data provider (defaults to yfinance)
    PRICE_PROVIDER=yfinance  # or "alpha_vantage" or "iex_cloud"
-   ALPHA_VANTAGE_API_KEY=your_alpha_vantage_api_key
-   IEX_CLOUD_API_KEY=your_iex_cloud_api_key
+   # ALPHA_VANTAGE_API_KEY=your_alpha_vantage_api_key
+   # IEX_CLOUD_API_KEY=your_iex_cloud_api_key
    ```
 
-## Usage
-
-1. Start the app:
-   ```
+4. Start the application:
+   ```bash
    python app.py
    ```
 
-2. Open your browser to [http://localhost:8000](http://localhost:8000)
+5. Open [http://localhost:8000](http://localhost:8000) in your browser
 
-3. Upload portfolio screenshots:
-   - Provide a tag (e.g., "Robinhood-IRA", "Fidelity-Taxable")
-   - Upload a screenshot of your positions
-   - The app will extract symbols and share counts
+## Using the App
 
-4. View your portfolio:
-   - See current prices and values
-   - Filter by tag or group by symbol
+1. **Upload Portfolio Screenshots**:
+   - Click "Upload" or paste directly from your clipboard
+   - Add a tag (e.g., "Robinhood-IRA", "Fidelity-Taxable")
+   - The AI will extract your positions automatically
+
+2. **View Your Portfolio**:
+   - See current prices and total values
+   - Filter by tags or group by symbol
+   - Hide options positions if desired
+
+3. **Get AI Insights**:
    - Use the chat feature to ask questions about your portfolio
+   - Get analysis of your holdings and performance
+   - Receive investment suggestions based on your positions
+
+4. **Manage Positions**:
+   - Edit positions manually if needed
+   - Update positions by uploading new screenshots
+   - Track changes over time
 
 ## API Endpoints
 
-- **GET `/`**: Main web interface
-- **POST `/upload`**: Upload a screenshot with tag
-- **POST `/update`**: Update positions from screenshot (alias for `/upload`)
-- **GET `/positions`**: Get current portfolio data with filters
-- **PATCH `/edit`**: Manually edit a position
-- **POST `/chat`**: Ask questions about your portfolio
+- `GET /`: Main web interface
+- `POST /upload`: Upload a screenshot with tag
+- `POST /paste`: Handle pasted image data
+- `POST /update`: Update positions from screenshot
+- `GET /positions`: Get current portfolio data with filters
+- `PATCH /edit`: Manually edit a position
+- `POST /chat`: Ask questions about your portfolio
 
 ## Data Storage
 
-- **holdings.csv**: Stores all position data
-- **images/**: Stores uploaded screenshots
+- `holdings.csv`: Stores all position data
+- `images/`: Stores uploaded screenshots for reference
 
-## Extending
+## Customization
 
-- **Switch LLM**: Set `LLM_BACKEND` environment variable to "gemini" (default), "openai", or "anthropic"
-- **Change Price Provider**: Set `PRICE_PROVIDER` to "yfinance", "alpha_vantage", or "iex_cloud"
-- **Add New Views**: Extend the HTML template in `templates/index.html`
+- **Switch LLM Provider**: Change `LLM_BACKEND` to use different AI models
+- **Change Price Provider**: Configure `PRICE_PROVIDER` for different market data sources
+- **Modify UI**: Customize the interface in `templates/index.html`
 
 ## License
 

@@ -1,7 +1,8 @@
 import os
 import shutil
+import base64
 from typing import List, Dict, Any, Optional
-from fastapi import FastAPI, UploadFile, File, Form, HTTPException, Query, Request
+from fastapi import FastAPI, UploadFile, File, Form, HTTPException, Query, Request, Body
 from fastapi.responses import JSONResponse, HTMLResponse
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
@@ -51,6 +52,10 @@ class EditPosition(BaseModel):
 class ChatRequest(BaseModel):
     query: str
 
+class PastedImage(BaseModel):
+    image_data: str  # Base64 encoded image data
+    tag: str
+
 @app.get("/", response_class=HTMLResponse)
 async def root(request: Request):
     """Serve the main HTML interface."""
@@ -60,6 +65,29 @@ async def root(request: Request):
 async def api_root():
     """API information endpoint."""
     return {"message": "Welcome to Personal Portfolio Tracker API. Go to /docs for API documentation."}
+
+async def process_image(filename: str, tag: str):
+    """Helper function to process an image and extract positions."""
+    try:
+        # Extract positions from image using LLM
+        positions = await parser.extract_positions_from_image(filename)
+        
+        # If no positions were found, return error
+        if not positions:
+            raise HTTPException(status_code=400, detail="Could not extract any positions from the image")
+        
+        # Update holdings in CSV
+        storage.update_holdings(positions, tag)
+        
+        return {
+            "message": f"Successfully extracted {len(positions)} positions for tag '{tag}'",
+            "positions": positions
+        }
+    except Exception as e:
+        # Clean up the file in case of error
+        if os.path.exists(filename):
+            os.remove(filename)
+        raise HTTPException(status_code=500, detail=f"Error processing image: {str(e)}")
 
 @app.post("/upload")
 async def upload_image(
@@ -84,26 +112,35 @@ async def upload_image(
     with open(filename, "wb") as buffer:
         shutil.copyfileobj(image.file, buffer)
     
+    return await process_image(filename, tag)
+
+@app.post("/paste")
+async def paste_image(data: PastedImage):
+    """
+    Handle pasted image data and extract positions using LLM.
+    
+    Args:
+        data: Object containing base64 image data and tag
+        
+    Returns:
+        Extracted positions
+    """
     try:
-        # Extract positions from image using LLM
-        positions = await parser.extract_positions_from_image(filename)
+        # Decode base64 image data
+        image_data = base64.b64decode(data.image_data.split(',')[1] if ',' in data.image_data else data.image_data)
         
-        # If no positions were found, return error
-        if not positions:
-            raise HTTPException(status_code=400, detail="Could not extract any positions from the image")
+        # Create unique filename
+        timestamp = storage.datetime.datetime.now().strftime("%Y%m%d%H%M%S")
+        filename = f"images/{timestamp}_{data.tag}_pasted.png"
         
-        # Update holdings in CSV
-        storage.update_holdings(positions, tag)
+        # Save the image
+        with open(filename, "wb") as f:
+            f.write(image_data)
         
-        return {
-            "message": f"Successfully extracted {len(positions)} positions for tag '{tag}'",
-            "positions": positions
-        }
+        return await process_image(filename, data.tag)
+        
     except Exception as e:
-        # Clean up the file in case of error
-        if os.path.exists(filename):
-            os.remove(filename)
-        raise HTTPException(status_code=500, detail=f"Error processing image: {str(e)}")
+        raise HTTPException(status_code=400, detail=f"Invalid image data: {str(e)}")
 
 @app.post("/update")
 async def update_positions(
@@ -120,7 +157,8 @@ async def update_positions(
 async def get_positions(
     exclude: Optional[List[str]] = Query(None),
     include: Optional[List[str]] = Query(None),
-    group_by_symbol: bool = Query(False, alias="group_by")
+    group_by_symbol: bool = Query(False, alias="group_by"),
+    hide_options: bool = Query(False)
 ):
     """
     Get current portfolio positions with live price data.
@@ -129,6 +167,7 @@ async def get_positions(
         exclude: Tags to exclude from results
         include: Tags to include in results (if None, include all)
         group_by_symbol: Whether to aggregate positions by symbol
+        hide_options: Whether to hide options (symbols ending with numbers)
         
     Returns:
         List of positions with price and value
@@ -137,7 +176,7 @@ async def get_positions(
     holdings = storage.read_holdings()
     
     # Apply filters
-    filtered_holdings = storage.filter_holdings(holdings, include, exclude)
+    filtered_holdings = storage.filter_holdings(holdings, include, exclude, hide_options=hide_options)
     
     # Group by symbol if requested
     if group_by_symbol:
