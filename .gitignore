@@ -11,6 +11,14 @@ __pycache__/
 *.bmp
 *.tiff
 *.ico
+# Keep docs images
+!docs/**/*.jpg
+!docs/**/*.jpeg
+!docs/**/*.png
+!docs/**/*.gif
+!docs/**/*.bmp
+!docs/**/*.tiff
+!docs/**/*.ico
 
 # Data files
 *.csv
@@ -20,6 +28,11 @@ __pycache__/
 *.db
 *.sqlite
 *.sqlite3
+# Keep docs data files
+!docs/**/*.csv
+!docs/**/*.json
+!docs/**/*.xlsx
+!docs/**/*.xls
 
 # Environment files
 env.sh
