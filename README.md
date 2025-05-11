@@ -14,6 +14,13 @@ A modern web application that uses AI to help you track and analyze your stock p
 - **Manual Editing**: Edit positions manually when needed
 - **Modern Web Interface**: Clean, responsive UI for easy portfolio management
 
+## Why Screenshots?
+
+- **Universal Compatibility**: Many brokers don't offer API access or require complex authentication processes. Screenshots work with any platform.
+- **Privacy Control**: Your data never leaves your control - no need to share credentials or API tokens with third parties.
+- **No API Limitations**: Avoid rate limits, token expirations, or sudden API changes from brokers.
+- **Simplified Setup**: No need to manage multiple API integrations across different brokers.
+
 ## Quick Start
 
 1. Clone the repository:
@@ -29,7 +36,7 @@ A modern web application that uses AI to help you track and analyze your stock p
 
 3. Configure your environment (create a `.env` file):
    ```
-   # Choose your LLM provider (Gemini is default)
+   # Choose your LLM provider (Gemini is default, it has a free-tier)
    LLM_BACKEND=gemini  # or "openai" or "anthropic"
    
    # Add your API key for the chosen provider
@@ -37,7 +44,7 @@ A modern web application that uses AI to help you track and analyze your stock p
    # OPENAI_API_KEY=your_openai_api_key
    # ANTHROPIC_API_KEY=your_anthropic_api_key
    
-   # Optional: Configure price data provider (defaults to yfinance)
+   # Optional: Configure price data provider (defaults to yfinance, free public API)
    PRICE_PROVIDER=yfinance  # or "alpha_vantage" or "iex_cloud"
    # ALPHA_VANTAGE_API_KEY=your_alpha_vantage_api_key
    # IEX_CLOUD_API_KEY=your_iex_cloud_api_key
