@@ -73,9 +73,9 @@ A modern web application that uses AI to help you track and analyze your stock p
    - Filter by tags or group by symbol
    - Hide options positions if desired
 
-   ![Portfolio View](docs/demo/profolio%20view.png)
+   ![Portfolio View](docs/demo/porfolio%20view.png)
    
-   ![Portfolio Distribution](docs/demo/profolio%20distribution.png)
+   ![Portfolio Distribution](docs/demo/porfolio%20distribution.png)
 
 3. **Get AI Insights**:
    - Use the chat feature to ask questions about your portfolio
