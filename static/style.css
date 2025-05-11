@@ -228,6 +228,13 @@ table th {
     display: none;
 }
 
+.chart-container {
+    position: relative;
+    height: 400px;
+    width: 100%;
+    margin: 1rem 0;
+}
+
 /* Responsive adjustments */
 @media (max-width: 768px) {
     .grid {

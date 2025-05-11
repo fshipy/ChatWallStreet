@@ -158,7 +158,8 @@ async def get_positions(
     exclude: Optional[List[str]] = Query(None),
     include: Optional[List[str]] = Query(None),
     group_by_symbol: bool = Query(False, alias="group_by"),
-    hide_options: bool = Query(False)
+    hide_options: bool = Query(False),
+    force_refresh: bool = Query(False)
 ):
     """
     Get current portfolio positions with live price data.
@@ -168,6 +169,7 @@ async def get_positions(
         include: Tags to include in results (if None, include all)
         group_by_symbol: Whether to aggregate positions by symbol
         hide_options: Whether to hide options (symbols ending with numbers)
+        force_refresh: Whether to force refresh prices
         
     Returns:
         List of positions with price and value
@@ -183,7 +185,7 @@ async def get_positions(
         filtered_holdings = storage.group_by_symbol(filtered_holdings)
     
     # Fetch current prices and calculate values
-    enriched_holdings = await price_fetcher.get_portfolio_values(filtered_holdings)
+    enriched_holdings = await price_fetcher.get_portfolio_values(filtered_holdings, force_refresh=force_refresh)
     
     # Calculate total portfolio value
     total_value = sum(holding.get("value", 0) for holding in enriched_holdings)
@@ -231,6 +233,11 @@ async def chat(request: ChatRequest):
     response = await parser.chat_with_portfolio(request.query, enriched_holdings)
     
     return {"response": response}
+
+@app.post("/refresh_prices")
+def refresh_prices():
+    price_fetcher.clear_price_cache()
+    return {"message": "Price cache cleared. Next load will fetch fresh prices."}
 
 # For running the app directly
 if __name__ == "__main__":

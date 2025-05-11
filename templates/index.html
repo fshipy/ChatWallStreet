@@ -88,7 +88,7 @@
                         <input type="checkbox" id="hideOptions">
                         <label for="hideOptions">Hide Options</label>
                     </div>
-                    <button id="refreshBtn" class="btn-secondary">Refresh Prices</button>
+                    <button id="refreshBtn" class="btn-secondary">Refresh</button>
                 </div>
             </div>
 
@@ -116,6 +116,14 @@
 
                 <div class="total-value">
                     Total Portfolio Value: <span id="totalValue">$0.00</span>
+                </div>
+            </div>
+
+            <!-- Portfolio Pie Chart Section -->
+            <div class="card">
+                <h2 class="section-title">Portfolio Distribution</h2>
+                <div class="chart-container">
+                    <canvas id="portfolioPieChart"></canvas>
                 </div>
             </div>
         </div>
@@ -202,6 +210,7 @@
         }
     </style>
 
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', function () {
             // Initial portfolio load
@@ -226,8 +235,8 @@
             });
 
             // Refresh button click
-            document.getElementById('refreshBtn').addEventListener('click', function () {
-                loadPortfolio();
+            document.getElementById('refreshBtn').addEventListener('click', async function () {
+                loadPortfolio(true);
             });
 
             // Group by checkbox change
@@ -286,6 +295,8 @@
                 }
             });
         });
+
+        let portfolioChart = null;
 
         // Function to upload screenshot
         async function uploadScreenshot() {
@@ -361,7 +372,7 @@
         }
 
         // Function to load portfolio
-        async function loadPortfolio() {
+        async function loadPortfolio(forceRefresh = false) {
             const tableBody = document.querySelector('#positionsTable tbody');
             const loadingDiv = document.getElementById('portfolioLoading');
             const contentDiv = document.getElementById('portfolioContent');
@@ -387,6 +398,9 @@
                     queryParams.append('hide_options', 'true');
                 }
                 excludeTags.forEach(tag => queryParams.append('exclude', tag));
+                if (forceRefresh) {
+                    queryParams.append('force_refresh', 'true');
+                }
 
                 const response = await fetch(`/positions?${queryParams.toString()}`);
                 const data = await response.json();
@@ -428,6 +442,9 @@
 
                         // Update tag filters
                         updateTagFilters(Array.from(uniqueTags), excludeTags);
+
+                        // Update pie chart
+                        updatePieChart(data.positions, groupBySymbol);
                     }
                 } else {
                     alert(`Error loading portfolio: ${data.detail}`);
@@ -438,6 +455,98 @@
                 loadingDiv.classList.add('hide');
                 contentDiv.classList.remove('hide');
             }
+        }
+
+        // Function to update the pie chart
+        function updatePieChart(positions, groupBySymbol) {
+            const ctx = document.getElementById('portfolioPieChart').getContext('2d');
+            
+            // Prepare data for the chart
+            let chartData;
+            if (groupBySymbol) {
+                // Group by symbol
+                chartData = positions.map(pos => ({
+                    label: pos.symbol,
+                    value: pos.value
+                }));
+            } else {
+                // Group by tag
+                const tagGroups = {};
+                positions.forEach(pos => {
+                    const tag = pos.tag || 'Untagged';
+                    if (!tagGroups[tag]) {
+                        tagGroups[tag] = 0;
+                    }
+                    tagGroups[tag] += pos.value;
+                });
+                chartData = Object.entries(tagGroups).map(([tag, value]) => ({
+                    label: tag,
+                    value: value
+                }));
+            }
+
+            // Sort by value in descending order
+            chartData.sort((a, b) => b.value - a.value);
+
+            // Generate colors
+            const colors = generateColors(chartData.length);
+
+            // Destroy existing chart if it exists
+            if (portfolioChart) {
+                portfolioChart.destroy();
+            }
+
+            // Create new chart
+            portfolioChart = new Chart(ctx, {
+                type: 'pie',
+                data: {
+                    labels: chartData.map(item => item.label),
+                    datasets: [{
+                        data: chartData.map(item => item.value),
+                        backgroundColor: colors,
+                        borderColor: '#ffffff',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'right',
+                            labels: {
+                                font: {
+                                    size: 12
+                                }
+                            }
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    const value = context.raw;
+                                    const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                    const percentage = ((value / total) * 100).toFixed(1);
+                                    return `${context.label}: $${value.toFixed(2)} (${percentage}%)`;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // Function to generate colors for the pie chart
+        function generateColors(count) {
+            const baseColors = [
+                '#4CAF50', '#2196F3', '#FFC107', '#9C27B0', '#FF5722',
+                '#00BCD4', '#FF9800', '#795548', '#607D8B', '#E91E63'
+            ];
+            
+            const colors = [];
+            for (let i = 0; i < count; i++) {
+                colors.push(baseColors[i % baseColors.length]);
+            }
+            return colors;
         }
 
         // Function to update tag filters
