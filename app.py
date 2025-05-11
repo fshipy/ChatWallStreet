@@ -212,6 +212,25 @@ async def edit_position(position: EditPosition):
     
     return {"message": f"Position updated: {position.symbol} ({position.tag}) - {position.shares} shares"}
 
+@app.get("/all_tags")
+async def get_all_tags():
+    """
+    Get all unique tags from all holdings.
+    
+    Returns:
+        List of all unique tags
+    """
+    # Read holdings from CSV
+    holdings = storage.read_holdings()
+    
+    # Extract all unique tags
+    unique_tags = sorted(set(h.get('tag') for h in holdings if h.get('tag')))
+    
+    return {
+        "tags": unique_tags,
+        "count": len(unique_tags)
+    }
+
 @app.post("/chat")
 async def chat(request: ChatRequest):
     """

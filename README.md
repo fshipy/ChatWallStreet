@@ -2,6 +2,8 @@
 
 A modern web application that uses AI to help you track and analyze your stock portfolio from screenshots. Upload images of your positions, let AI extract the data, and get insights about your investments—all without complex setup or databases.
 
+**Note: All stock data shown in the demo images are for testing purposes only.**
+
 ## Features
 
 - **AI-Powered Position Extraction**: Upload screenshots of your portfolio and let AI extract stock positions automatically
@@ -64,15 +66,23 @@ A modern web application that uses AI to help you track and analyze your stock p
    - Add a tag (e.g., "Robinhood-IRA", "Fidelity-Taxable")
    - The AI will extract your positions automatically
 
+   ![Upload Screenshot](docs/demo/upload.png)
+
 2. **View Your Portfolio**:
    - See current prices and total values
    - Filter by tags or group by symbol
    - Hide options positions if desired
 
+   ![Portfolio View](docs/demo/profolio%20view.png)
+   
+   ![Portfolio Distribution](docs/demo/profolio%20distribution.png)
+
 3. **Get AI Insights**:
    - Use the chat feature to ask questions about your portfolio
    - Get analysis of your holdings and performance
    - Receive investment suggestions based on your positions
+
+   ![AI Chat](docs/demo/chat.png)
 
 4. **Manage Positions**:
    - Edit positions manually if needed

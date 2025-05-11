@@ -431,7 +431,7 @@ async def chat_with_portfolio_gemini(query: str, portfolio_json: str) -> str:
     payload = {
         "contents": [{
             "parts": [
-                {"text": f"You are a helpful financial assistant. You are analyzing a user's stock portfolio.\n\nHere is the portfolio data:\n{portfolio_json}\n\nThe user's question is: {query}"}
+                {"text": f"You are a helpful financial assistant. Use the provided portfolio data (symbols, shares, tags, latest price) to answer the user's question with your knowledge of the stock market.\n\nHere is the portfolio data:\n{portfolio_json}\n\nThe user's question is: {query}"}
             ]
         }]
     }

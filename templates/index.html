@@ -389,7 +389,12 @@
             loadingDiv.classList.remove('hide');
 
             try {
-                // Build query parameters
+                // First, get all available tags (unfiltered)
+                const allTagsResponse = await fetch('/all_tags');
+                const allTagsData = await allTagsResponse.json();
+                const allTags = allTagsData.tags;
+                
+                // Build query parameters for filtered positions
                 let queryParams = new URLSearchParams();
                 if (groupBySymbol) {
                     queryParams.append('group_by', 'true');
@@ -413,9 +418,6 @@
                     if (data.positions.length === 0) {
                         tableBody.innerHTML = `<tr><td colspan="6" style="text-align: center;">No positions found</td></tr>`;
                     } else {
-                        // Track unique tags for filters
-                        const uniqueTags = new Set();
-
                         data.positions.forEach(position => {
                             const row = document.createElement('tr');
 
@@ -430,22 +432,17 @@
                             `;
 
                             tableBody.appendChild(row);
-
-                            // Add to unique tags
-                            if (position.tag) {
-                                uniqueTags.add(position.tag);
-                            }
                         });
-
-                        // Update total value
-                        totalValueSpan.textContent = `$${data.total_value.toFixed(2)}`;
-
-                        // Update tag filters
-                        updateTagFilters(Array.from(uniqueTags), excludeTags);
-
-                        // Update pie chart
-                        updatePieChart(data.positions, groupBySymbol);
                     }
+
+                    // Update total value
+                    totalValueSpan.textContent = `$${data.total_value.toFixed(2)}`;
+
+                    // Update tag filters using ALL tags, not just filtered ones
+                    updateTagFilters(allTags, excludeTags);
+
+                    // Update pie chart
+                    updatePieChart(data.positions, groupBySymbol);
                 } else {
                     alert(`Error loading portfolio: ${data.detail}`);
                 }
@@ -552,32 +549,30 @@
         // Function to update tag filters
         function updateTagFilters(tags, excludedTags) {
             const tagFiltersDiv = document.getElementById('tagFilters');
+            
+            // Always rebuild the tag filters with the complete list of tags
+            tagFiltersDiv.innerHTML = '';
 
-            // Only rebuild if we have new tags
-            if (tagFiltersDiv.children.length === 0 || tagFiltersDiv.children.length !== tags.length) {
-                tagFiltersDiv.innerHTML = '';
+            tags.forEach(tag => {
+                const filterGroup = document.createElement('div');
+                filterGroup.className = 'checkbox-group';
 
-                tags.forEach(tag => {
-                    const filterGroup = document.createElement('div');
-                    filterGroup.className = 'checkbox-group';
+                const checkbox = document.createElement('input');
+                checkbox.type = 'checkbox';
+                checkbox.className = 'tag-filter';
+                checkbox.id = `filter-${tag}`;
+                checkbox.value = tag;
+                checkbox.checked = excludedTags.includes(tag);
+                checkbox.addEventListener('change', loadPortfolio);
 
-                    const checkbox = document.createElement('input');
-                    checkbox.type = 'checkbox';
-                    checkbox.className = 'tag-filter';
-                    checkbox.id = `filter-${tag}`;
-                    checkbox.value = tag;
-                    checkbox.checked = excludedTags.includes(tag);
-                    checkbox.addEventListener('change', loadPortfolio);
+                const label = document.createElement('label');
+                label.htmlFor = `filter-${tag}`;
+                label.textContent = `Hide ${tag}`;
 
-                    const label = document.createElement('label');
-                    label.htmlFor = `filter-${tag}`;
-                    label.textContent = `Hide ${tag}`;
-
-                    filterGroup.appendChild(checkbox);
-                    filterGroup.appendChild(label);
-                    tagFiltersDiv.appendChild(filterGroup);
-                });
-            }
+                filterGroup.appendChild(checkbox);
+                filterGroup.appendChild(label);
+                tagFiltersDiv.appendChild(filterGroup);
+            });
         }
 
         // Function to send chat query
